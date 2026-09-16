@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopMate AI</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        header p {
+            margin: 6px 0 0;
+            color: #d1d5db;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 15px;
+        }
+
+        .chat-box {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        #messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            background: #dbeafe;
+            margin-left: auto;
+        }
+
+        .bot {
+            background: #f3f4f6;
+            margin-right: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 13px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 18px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        #sendBtn {
+            background: #2563eb;
+            color: white;
+        }
+
+        #resetBtn {
+            background: #ef4444;
+            color: white;
+        }
+
+        .examples {
+            padding: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .input-area {
+                flex-direction: column;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🛒 ShopMate AI</h1>
+    <p>AI E-Commerce Customer Support Agent</p>
+</header>
+
+<div class="container">
+
+    <div class="chat-box">
+
+        <div id="messages">
+            <div class="message bot">
+                Hello! 👋 I'm ShopMate AI.
+
+I can help you with:
+• Product queries
+• Order status
+• Returns
+• Product recommendations
+
+Try asking me something!
+            </div>
+        </div>
+
+        <div class="examples">
+            <button class="example" onclick="useExample('Show me gaming products')">
+                Gaming Products
+            </button>
+
+            <button class="example" onclick="useExample('What is the status of ORD1001?')">
+                Order Status
+            </button>
+
+            <button class="example" onclick="useExample('Can I return ORD1002?')">
+                Check Return
+            </button>
+
+            <button class="example" onclick="useExample('Recommend a product under 2000')">
+                Recommendations
+            </button>
+        </div>
+
+        <div class="input-area">
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Ask ShopMate AI..."
+                autocomplete="off"
+            >
+
+            <button id="sendBtn" onclick="sendMessage()">
+                Send
+            </button>
+
+            <button id="resetBtn" onclick="resetChat()">
+                Reset
+            </button>
+        </div>
+
+        <div class="status" id="status">
+            Ready
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    const sessionId = "demo-user";
+    const input = document.getElementById("messageInput");
+    const messages = document.getElementById("messages");
+    const statusText = document.getElementById("status");
+
+    function addMessage(text, type) {
+        const div = document.createElement("div");
+        div.className = "message " + type;
+        div.textContent = text;
+
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function useExample(text) {
+        input.value = text;
+        input.focus();
+    }
+
+    async function sendMessage() {
+        const message = input.value.trim();
+
+        if (!message) {
+            return;
+        }
+
+        addMessage(message, "user");
+
+        input.value = "";
+        statusText.textContent = "ShopMate AI is thinking...";
+
+        try {
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    message: message
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.answer) {
+                addMessage(data.answer, "bot");
+            } else if (data.error) {
+                addMessage("Error: " + data.error, "bot");
+            } else {
+                addMessage("No response received.", "bot");
+            }
+
+        } catch (error) {
+            addMessage(
+                "Unable to connect to ShopMate AI. Make sure Flask and Ollama are running.",
+                "bot"
+            );
+        }
+
+        statusText.textContent = "Ready";
+        input.focus();
+    }
+
+    async function resetChat() {
+        try {
+            await fetch("/reset", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    session_id: sessionId
+                })
+            });
+
+            messages.innerHTML = "";
+
+            addMessage(
+                "Chat reset successfully. How can I help you?",
+                "bot"
+            );
+
+        } catch (error) {
+            addMessage("Could not reset the chat.", "bot");
+        }
+    }
+
+    input.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+</script>
+
+</body>
+</html>
